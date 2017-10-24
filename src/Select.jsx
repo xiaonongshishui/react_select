@@ -20,8 +20,8 @@ const hotSearchData = [{menu:true,name:"热门搜索"},{
   securityId:12345,
   symbol:'第六名'
 }];
-
-const recentSearchData = [{menu:true,name:"最近搜索"},
+//const hotSearchData = [{menu:true,name:"热门搜索"}];
+const recentSearchData = [{menu:true,name:"最近搜索",clearBtn:true},
   {
     securityId:12345,
     symbol:'哈哈哈啊哈'
@@ -42,7 +42,7 @@ const recentSearchData = [{menu:true,name:"最近搜索"},
     symbol:'嘎嘎嘎'
   }
 ];
-
+//const recentSearchData =[{menu:true,name:"最近搜索"}];
 
 const KeyCode = {
   upKeyCode:38,
@@ -73,10 +73,6 @@ class List extends Component{
 
   onDocumentKeyDown(e){
     console.log("keydown");
-    if(this.delayIndex > 0){
-      this.delayIndex--;
-      return;
-    }
     
     let { data , handleSetInputValue ,delayIndex} = this.props;
     let { activeIndex } = this.state;
@@ -86,59 +82,43 @@ class List extends Component{
     if(e === undefined){
       e = window.event
     }
+    let _activeIndex = activeIndex;
     console.log(e.keyCode);
+    let up_count = 0;
+    let down_count = 0;
+    let processFunc = (isUp)=>{
+     let count = isUp?up_count:down_count;
+      if( count === dataLen){
+        _activeIndex = 0;
+        return;
+      }
+      if(isUp){
+        up_count++
+        _activeIndex = _activeIndex - 1 < 0?(dataLen-1):(_activeIndex - 1);
+      }else{
+        down_count++
+        _activeIndex = _activeIndex + 1 > dataLen-1?0:(_activeIndex + 1);
+      }
+      if(data[_activeIndex].menu){
+        processFunc(isUp);
+      }
+      activeIndex = _activeIndex;
+      this.list.scrollTop = activeIndex === 1 ?0:itemHeight*activeIndex;
+      if(activeIndex === 0 && data[activeIndex].menu){
+        handleSetInputValue("no data");
+      }else{
+        handleSetInputValue(data[activeIndex].symbol);
+      }
+      this.handleChangeActiveIndex(activeIndex);
+    }
+
     switch(e.keyCode){
       case KeyCode.upKeyCode:
-      if(activeIndex === 0 ){
-        
-          activeIndex = dataLen-1;
-          this.list.scrollTop = dataLen * itemHeight;
-
-      }else{
-        if(data[activeIndex-1].menu ){
-          if(activeIndex-1 == 0){
-            activeIndex = dataLen-1;
-            this.list.scrollTop = dataLen * itemHeight;
-          }else{
-            activeIndex -= 2;
-            this.list.scrollTop -= itemHeight*2;
-          }
-        }else{
-          activeIndex--;
-          this.list.scrollTop -= itemHeight;
-        }
-        
-      }
-      //input.value = data[activeIndex].symbol;
-      //this.setState({activeIndex});
-      handleSetInputValue(data[activeIndex].symbol);
-      this.handleChangeActiveIndex(activeIndex);
-
+      processFunc(true);
       break;
       case KeyCode.downKeyCode:
-      if(activeIndex === dataLen-1){
-        
-          activeIndex = 0;
-          this.list.scrollTop = 0;
-          if(data[activeIndex].menu){
-            activeIndex++;
-            //this.list.scrollTop += itemHeight;
-          }
-       
-      }else{
-        if(data[activeIndex+1].menu && activeIndex !== 0){
-          activeIndex += 2;
-          this.list.scrollTop += itemHeight*2;
-        }else{
-          activeIndex++;
-          this.list.scrollTop += itemHeight;
-        }
-        
-      }
-      //input.value = data[activeIndex].symbol;
-      //this.setState({activeIndex});
-      handleSetInputValue(data[activeIndex].symbol);
-      this.handleChangeActiveIndex(activeIndex);
+      processFunc(false);
+      
       break;
       case KeyCode.enterKeyCode:
       alert( " 股票id为 " + data[activeIndex].securityId + " " + data[activeIndex].symbol);
@@ -155,7 +135,10 @@ class List extends Component{
     return <ul ref={(ref)=>{this.list = ref}}>
         { 
           data && data.length > 0 ?data.map((item,i)=>{
-              return <li key={i} className={(activeIndex === i && !item.menu?"now":"") + (item.menu?' menu':'')}>{item.menu?item.name:item.symbol}</li>
+              return <li key={i} 
+              className={(activeIndex === i && !item.menu?"now":"") + (item.menu?' menu':'')}>
+              {item.menu?item.clearBtn?<div><span>{item.name}</span><button onClick={()=>{alert("clear")}} style={{textAlign:"right",display:"inline-block"}}>清除</button></div>:<span>{item.name}</span>:<div onClick={()=>{alert('to symbol link')}}>{item.symbol}</div>}
+              </li>
           }):"No data!"
           }
       </ul>
